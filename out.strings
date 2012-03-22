@@ -1,5 +1,5 @@
 /* example string to localize */
-"greeting" = "Login to My Program";
+"greeting" = "Connectez-vous sur MyCochlear"
 /*
 I 
 am
@@ -8,5 +8,4 @@ multiline
 comment.
 Followed by another key/value pair
 */
-"coffee" = "I Love coffee";
-
+"coffee" = "Je café de l'amour"

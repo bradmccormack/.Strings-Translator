@@ -1,4 +1,3 @@
-from sys import argv
 from codecs import open
 from re import compile
 from copy import copy
@@ -7,13 +6,14 @@ import codecs
 import json
 import sys
 import os
+import argparse
 
-#shitty globals for regex
+#globals for regex
 re_translation = compile(r'^"(.+)" = "(.+)";$')
 re_comment_single = compile(r'^/\*.*\*/$')
 re_comment_start = compile(r'^/\*.*$')
 re_comment_end = compile(r'^.*\*/$')
-
+SPEECH=chr(34)
 
 api_url = "http://api.microsofttranslator.com/V2/Ajax.svc/Translate"
 app_id = ''
@@ -65,56 +65,6 @@ def translate(text, source, target, html=False):
     return _run_query(query_args)
 
 
-
-	#SHITTTTT Google translate is paid only
-
-
-
-"""
-	#SHITTTTT Google translate is paid only
-class Translate(object):
-  
-
-    def __init__(self):
-        super(Translate, self).__init__()
-        self.langs = ["af", "sq", "ar", "be", "bg", "ca", "zh-CN", "zh-TW",
-        "hr", "cs", "da", "nl", "en", "et", "tl", "fi", "fr",
-        "gl", "de", "el", "ht", "iw", "hi", "hu", "is", "id",
-        "ga", "it", "ja", "lv", "lt", "mk", "ms", "mt", "no",
-        "fa", "pl", "pt", "ro", "ru", "sr", "sk", "sl", "es",
-         "sw", "sv", "th", "tr", "uk", "vi", "cy", "yi"]
-         
-        self.API_KEY = "AIzaSyC5wXV9B15WaWQ08qMDD-0O-ZihSnbpi48"
-        self.API_URL = "https://www.googleapis.com/language/translate/v2?\key=%s&q=%s&source=%s&target=%s&prettyprint=false"
-
-        self.uri = self.API_URL
-
-
-    def translate(self, params):
-        #Translates texts
-         #      keywords:
-          #     params - Dictionary
-           #    src_text - String
-            #   src_lang - 2 letter iso code for language
-             #  dest_lang - 2 letter iso code for language
-       
-    
-        
-        req_uri = self.uri % (self.API_KEY, urllib2.quote(params['src_text']),
-        params['src_lang'],
-        params['dest_lang'])
-
-        hdl = urllib2.urlopen(req_uri)
-        resp = hdl.read()
-        hdl.close()
-        j = json.loads(resp)
-        try:
-            return j['data']['translations'][0]['translatedText']
-        except TypeError:
-            return "Failed to translate"
-"""        
-
-
 class LocalizedString():
     def __init__(self, comments, translation):
         self.comments, self.translation = comments, translation
@@ -124,13 +74,14 @@ class LocalizedString():
         return u'%s%s\n' % (u''.join(self.comments), self.translation)
 
 class LocalizedFile():
-    
-    
-    def __init__(self, fname=None, auto_read=False):
+    def __init__(self, translator,fname=None, auto_read=False,source="en",dest="fr"):
         self.fname = fname
         self.strings = []
         self.strings_d = {}
-
+        self.translator=translator
+        self.source=source
+        self.dest=dest
+		
         if auto_read:
             self.read_from_file(fname)
 
@@ -162,10 +113,16 @@ class LocalizedFile():
                 line = f.readline()
 
             string = LocalizedString(comments, translation)
-            self.strings.append(string)
+            translatedstring=self.translator(string.value,self.source,self.dest)
+            for c in comments:
+            	self.strings.append(c)
+            #I'm not sure at this time of night how to migrate the regex symbols across but lucky I know what they are :-P
+            self.strings.append(SPEECH + string.key + SPEECH + " = " + SPEECH + translatedstring + SPEECH+'\n')
             self.strings_d[string.key] = string
 
         f.close()
+
+	
 
     def save_to_file(self, fname=None):
         fname = self.fname if fname == None else fname
@@ -176,7 +133,7 @@ class LocalizedFile():
             exit(-1)
 
         for string in self.strings:
-            f.write(string.__unicode__())
+            f.write(string)
 
         f.close()
 
@@ -193,25 +150,23 @@ class LocalizedFile():
             merged.strings_d[string.key] = string
 
         return merged
-        
-#load in strings file
-LF=LocalizedFile("demo.strings",True)
-set_app_id('2A9444C210A043010CB9FC4AB8B6DE797AE88790')
-for k in LF.strings_d:
-	#get current value
-	text=LF.strings_d[k].value
-	#prepare translation request
-	"""
-	# src_text - String
-               src_lang - 2 letter iso code for language
-               dest_lang - 2 letter iso code for langu
-    """
-	#trequest={"src_text": text,
-    #          "src_lang": "en",
-    #          "dest_lang": "fr"}
-	#translate
-	print translate(text,"en","fr")
-    #update the dictionary with the translated value
+
+def main():
+    parser = argparse.ArgumentParser(description='A damn sinmple .strings translator so we can observe other languages with mildy accurate information. ',
+    epilog="Yes.. it's a pile of steaming,smelly hacks :-)")
+
+    parser.add_argument('-i',help='Input file',required=True)
+    parser.add_argument('-o',help='Output file',required=True)
+    parser.add_argument('-s',help='Source Langauge (e.g en,fr etc - Check bing (Usually start with en as it is accurate)',required=False,default='en')
+    parser.add_argument('-d',help='Dest Language (e.g fr,ko,ru etc -Check bing',required=False,default='fr')
+  
+    Options = parser.parse_args()
+  
+    #brads bing id using for translation
+    set_app_id('2A9444C210A043010CB9FC4AB8B6DE797AE88790')
+    #load in strings file
+    LF=LocalizedFile(translate,Options.i,True,Options.s,Options.d)
+    LF.save_to_file(Options.o)
 
 #save the translated file as something else
-
+main()
